@@ -1,0 +1,479 @@
+classdef PF < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                matlab.ui.Figure
+        TabGroup                matlab.ui.container.TabGroup
+        ClassificationTab       matlab.ui.container.Tab
+        TestingPanel            matlab.ui.container.Panel
+        MemberteamListBoxLabel  matlab.ui.control.Label
+        MemberteamListBox       matlab.ui.control.ListBox
+        PhraseListBoxLabel      matlab.ui.control.Label
+        PhraseListBox           matlab.ui.control.ListBox
+        OKButton                matlab.ui.control.Button
+        Label                   matlab.ui.control.Label
+        TextArea                matlab.ui.control.TextArea
+        TextArea_2              matlab.ui.control.TextArea
+        Image                   matlab.ui.control.Image
+        Label_2                 matlab.ui.control.Label
+        SignalTab               matlab.ui.container.Tab
+        UIAxes1_2               matlab.ui.control.UIAxes
+        UIAxes1_3               matlab.ui.control.UIAxes
+        PatternTab              matlab.ui.container.Tab
+        UIAxes2                 matlab.ui.control.UIAxes
+        UIAxes1                 matlab.ui.control.UIAxes
+        FinalProjectBiologicalSignalProcessingLabel  matlab.ui.control.Label
+    end
+
+    
+    methods (Access = private)
+        
+        function k = freq(app,A)
+            l=length(A);
+            NFFT=2^nextpow2(l);
+            Y=fft(A,NFFT)/l;
+            max(2*abs(Y(1:NFFT/2+1)));
+            k=find(2*abs(Y(1:NFFT/2+1))==max(2*abs(Y(1:NFFT/2+1))));
+        end
+        function Energia = energy(app,A)   
+    	    fs=8000;
+            l=length(A);
+            xn=highpass(A,250,fs); %Pasa altas de 250Hz
+            maximo=max(abs(xn));
+            xn=xn/maximo; %Normalizacion de la señal
+            senal=xn(abs(xn)>0.05); %Recorte de la parte de interes en senal
+            %Se obtienen los cruces por 0 en d
+            a=senal>0;
+            b=a(2:end);
+            c=a(1:end-1)-b;
+            d=find(c);
+            %Obtencion de energia en los intervalos de cruce por 0
+            val = 1;
+            for j=1:length(d)
+                %La ventana sera desde el valor hasta el siguiente cruce por 0
+                ventana = senal(val:d(j));
+                T=1+d(j)-val;
+                % Calculo de energia
+                E(j)=sumsqr(ventana)/T;
+                %La siguiente ventana empezara del siguiente valor
+                val = d(j)+1;
+            end
+            %La ultima ventana ira desde el valor hasta el fin de la señal
+            ventana = senal(val:end);
+            T=1+length(senal)-val;
+            E(end+1)=sumsqr(ventana)/T;
+            E=E(E>0.035); %Se eliminan los valores de energía muy pequeños
+            %Obtencion del patron de distribucion de la energia a lo largo de la señal
+            AEZI=[];
+            int=0.02; % Intervalo para la distribución
+            for j=0:int:(0.7-int) %0.7 es el valor máximo de energía encontrado
+                AEZI(end+1)=sum(E>j & E<(j+int));
+            end
+            plot(app.UIAxes2, AEZI);
+            Energia=AEZI; %Patron de distribucion de energía para las 80 señales       
+        end
+    end
+    
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Code that executes after component creation
+        function startupFcn(app)
+            clear all
+            app.Label.Visible = 'off';
+            
+        end
+
+        % Button pushed function: OKButton
+        function OKButtonPushed(app, event)
+            fj=imread("JE.jpg");
+            ft=imread("TI.jpg");
+            fa=imread("ARI.jpg");
+            fy=imread("YS.jpeg");
+            app.Label.Visible= 'on';
+            i = get(app.MemberteamListBox,'value'); %integrante del equipo
+            frase = get(app.PhraseListBox,'value');%frase seleccionada
+            %app.Label.Text=i;
+            n=randi([1 2],1,1); %numero aleatorio del 1-2 para seleccionar uno de la base de datos
+            bd=xlsread('BasedeDatosTest.xlsx');
+            if i=='1' 
+                if frase=="1"
+                    A=bd(n,:);     
+                elseif frase =='2'
+                    A=bd(n+2,:);
+                elseif frase =='3'
+                    A=bd(n+4,:);
+                else
+                    A=bd(n+6,:);
+                end
+            elseif i=='2' 
+                if frase=="1"
+                    A=bd(n+8,:);     
+                elseif frase =='2'
+                    A=bd(n+10,:);
+                elseif frase =='3'
+                    A=bd(n+12,:);
+                else
+                    A=bd(n+14,:);
+                end
+            elseif i=='3' 
+                if frase=="1"
+                    A=bd(n+16,:);     
+                elseif frase =='2'
+                    A=bd(n+18,:);
+                elseif frase =='3'
+                    A=bd(n+20,:);
+                else
+                    A=bd(n+22,:);
+                end
+            else
+                if frase=="1"
+                    A=bd(n+24,:);     
+                elseif frase =='2'
+                    A=bd(n+26,:);
+                elseif frase =='3'
+                    A=bd(n+28,:);
+                else
+                    A=bd(n+30,:);
+                end
+
+            end       
+            sound(A);
+            pause(2);
+            l=length(A);
+            time=linspace(0,2,length(A));
+            plot(app.UIAxes1, time,A);
+            plot(app.UIAxes1_2, time,A);
+            k = freq(app,A);
+%             if k<=717.5
+%                 i2='3';
+%             elseif k>717.5 && k<=984.025
+%                 i2='1';
+%             elseif k>984.025 && k<=1223.5
+%                 i2='2';
+%             else
+%                 i2='4';
+%             end  
+            if k<=532.75 || k==1289
+                i2='1';
+            elseif k>532.75 && k<=786.0625
+                i2='3';
+            elseif k>786.0625 && k<=1190.2375
+                i2='2';
+            else
+                i2='4';
+            end 
+            i=i2; 
+            Energia = energy(app,A);
+ 
+            % RESULTADOS
+            bdr=xlsread('BasedeDatos.xlsx');
+            if i=='1' 
+                app.Label.Text='Jesus';
+                app.Image.ImageSource=fj;
+                load resultsYi.mat w1 w2 w3 b1 b2 b3
+                vnorm2=80;
+                pat=Energia/vnorm2;
+                aa1=logsig(w1*pat'+b1); 
+                aa2=logsig(w2*aa1+b2);
+                aa3=purelin(w3*aa2+b3);
+                [m,frase]=max(aa3);
+                if frase==1
+                    Ar=bdr(1,:); 
+                    [y,Fs]=audioread('hola_jesus.mp4');
+                    sound(y,Fs);
+                    app.Label_2.Text='¡Hola, Jesús!';
+                    plot(app.UIAxes1_2, time,A);
+                elseif frase ==2
+                    Ar=bdr(6,:); 
+                    [y,Fs]=audioread('bye_jesus.mp4');
+                    sound(y,Fs);
+                    app.Label_2.Text='¡Hasta la vista, Jesús!';
+                elseif frase ==3
+                    Ar=bdr(11,:); 
+                    [y,Fs]=audioread('comoJe.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='Sad, Jesús :(';
+                else
+                    Ar=bdr(16,:); 
+                    [y,Fs]=audioread('dondeJe.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='En tu corazón, Jesús';
+                end
+                    
+            elseif i=='2'
+                app.Label.Text='Tibu';
+                app.Image.ImageSource=ft;
+                load resultsTibu.mat w1 w2 w3 b1 b2 b3
+                vnorm2=80;
+                pat=Energia/vnorm2;
+                aa1=logsig(w1*pat'+b1); 
+                aa2=logsig(w2*aa1+b2);
+                aa3=purelin(w3*aa2+b3);
+                [m,frase]=max(aa3);
+                if frase==1
+                    Ar=bdr(21,:); 
+                    [y,Fs]=audioread('hola_tibu.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='¡Hola, Israel!';
+                elseif frase ==2
+                    Ar=bdr(26,:); 
+                    [y,Fs]=audioread('bye_tibu.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='¡Hasta la vista, Israel!';
+                elseif frase ==3
+                    Ar=bdr(31,:); 
+                    [y,Fs]=audioread('comoTibu.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='Sad, Israel :(';
+                else
+                    Ar=bdr(36,:); 
+                    [y,Fs]=audioread('dondeTibu.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='En tu corazón, Israel';
+                end
+            elseif i=='3'
+                app.Label.Text='ARISUCH';
+                app.Image.ImageSource=fa;
+                load resultsAri.mat w1 w2 w3 b1 b2 b3
+                vnorm2=80;
+                pat=Energia/vnorm2;
+                aa1=logsig(w1*pat'+b1); 
+                aa2=logsig(w2*aa1+b2);
+                aa3=purelin(w3*aa2+b3);
+                [m,frase]=max(aa3);
+                if frase==1
+                    Ar=bdr(40,:); 
+                    [y,Fs]=audioread('hola_ari.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='¡Hola, Ariatne!';
+                elseif frase ==2
+                    Ar=bdr(46,:); 
+                    [y,Fs]=audioread('bye_ari.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='¡Hasta la vista, Ariatne!';
+                elseif frase ==3
+                    Ar=bdr(51,:); 
+                    [y,Fs]=audioread('comoAr.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='Sad, Ariatne :(';
+                else
+                    Ar=bdr(56,:); 
+                    [y,Fs]=audioread('dondeAr.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='En tu corazón, Ariatne';
+                end
+            else
+                app.Label.Text='Ys';
+                app.Image.ImageSource=fy;
+                load resultsYs.mat w1 w2 w3 b1 b2 b3
+                vnorm2=80;
+                pat=Energia/vnorm2;
+                aa1=logsig(w1*pat'+b1); 
+                aa2=logsig(w2*aa1+b2);
+                aa3=purelin(w3*aa2+b3);
+                [m,frase]=max(aa3);
+                if frase==1
+                    Ar=bdr(61,:); 
+                    [y,Fs]=audioread('hola_ys.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='¡Hola, Yslen!';
+                elseif frase ==2
+                    Ar=bdr(66,:); 
+                    [y,Fs]=audioread('bye_ys.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='¡Hasta la vista, Yslen!';
+                elseif frase ==3
+                    Ar=bdr(71,:); 
+                    [y,Fs]=audioread('comoYs.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='Sad, Yslen :(';
+                else
+                    Ar=bdr(76,:); 
+                    [y,Fs]=audioread('dondeYs.mp4');
+                    sound(y,Fs)
+                    app.Label_2.Text='En tu corazón, Yslen';
+                end    
+            end 
+            time=linspace(0,2,length(Ar));
+            plot(app.UIAxes1_3, time,Ar);
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Color = [1 1 1];
+            app.UIFigure.Position = [100 100 640 480];
+            app.UIFigure.Name = 'MATLAB App';
+
+            % Create TabGroup
+            app.TabGroup = uitabgroup(app.UIFigure);
+            app.TabGroup.Position = [26 25 594 386];
+
+            % Create ClassificationTab
+            app.ClassificationTab = uitab(app.TabGroup);
+            app.ClassificationTab.Title = 'Classification';
+            app.ClassificationTab.BackgroundColor = [1 1 1];
+            app.ClassificationTab.ForegroundColor = [0.149 0.149 0.149];
+
+            % Create TestingPanel
+            app.TestingPanel = uipanel(app.ClassificationTab);
+            app.TestingPanel.TitlePosition = 'centertop';
+            app.TestingPanel.Title = 'Testing';
+            app.TestingPanel.BackgroundColor = [1 0.8902 0.9569];
+            app.TestingPanel.FontWeight = 'bold';
+            app.TestingPanel.Position = [16 15 260 317];
+
+            % Create MemberteamListBoxLabel
+            app.MemberteamListBoxLabel = uilabel(app.TestingPanel);
+            app.MemberteamListBoxLabel.HorizontalAlignment = 'right';
+            app.MemberteamListBoxLabel.Position = [9 259 79 22];
+            app.MemberteamListBoxLabel.Text = 'Member team';
+
+            % Create MemberteamListBox
+            app.MemberteamListBox = uilistbox(app.TestingPanel);
+            app.MemberteamListBox.Items = {'1', '2', '3', '4'};
+            app.MemberteamListBox.Position = [103 209 34 74];
+            app.MemberteamListBox.Value = '1';
+
+            % Create PhraseListBoxLabel
+            app.PhraseListBoxLabel = uilabel(app.TestingPanel);
+            app.PhraseListBoxLabel.HorizontalAlignment = 'right';
+            app.PhraseListBoxLabel.Position = [12 166 43 22];
+            app.PhraseListBoxLabel.Text = 'Phrase';
+
+            % Create PhraseListBox
+            app.PhraseListBox = uilistbox(app.TestingPanel);
+            app.PhraseListBox.Items = {'1', '2', '3', '4'};
+            app.PhraseListBox.Position = [70 116 34 74];
+            app.PhraseListBox.Value = '1';
+
+            % Create OKButton
+            app.OKButton = uibutton(app.TestingPanel, 'push');
+            app.OKButton.ButtonPushedFcn = createCallbackFcn(app, @OKButtonPushed, true);
+            app.OKButton.Position = [76 63 100 22];
+            app.OKButton.Text = 'OK';
+
+            % Create Label
+            app.Label = uilabel(app.TestingPanel);
+            app.Label.HorizontalAlignment = 'center';
+            app.Label.Position = [45 15 161 22];
+            app.Label.Text = '';
+
+            % Create TextArea
+            app.TextArea = uitextarea(app.TestingPanel);
+            app.TextArea.HorizontalAlignment = 'center';
+            app.TextArea.FontSize = 8;
+            app.TextArea.Position = [136 209 61 74];
+            app.TextArea.Value = {'Jesus'; ''; 'Israel'; ''; 'Ariatne'; ''; 'Yslen'};
+
+            % Create TextArea_2
+            app.TextArea_2 = uitextarea(app.TestingPanel);
+            app.TextArea_2.HorizontalAlignment = 'center';
+            app.TextArea_2.FontSize = 8;
+            app.TextArea_2.Position = [103 116 94 74];
+            app.TextArea_2.Value = {'Buenos días'; ''; 'Buenas noches'; ''; '¿Cómo estás?'; ''; '¿Dónde estás?'};
+
+            % Create Image
+            app.Image = uiimage(app.ClassificationTab);
+            app.Image.Position = [399 15 100 100];
+
+            % Create Label_2
+            app.Label_2 = uilabel(app.ClassificationTab);
+            app.Label_2.HorizontalAlignment = 'center';
+            app.Label_2.FontSize = 15;
+            app.Label_2.FontWeight = 'bold';
+            app.Label_2.FontColor = [0.0314 0.0902 0.349];
+            app.Label_2.Position = [330 131 237 22];
+            app.Label_2.Text = '';
+
+            % Create SignalTab
+            app.SignalTab = uitab(app.TabGroup);
+            app.SignalTab.Title = 'Signal';
+
+            % Create UIAxes1_2
+            app.UIAxes1_2 = uiaxes(app.SignalTab);
+            title(app.UIAxes1_2, 'Test Signal')
+            xlabel(app.UIAxes1_2, 't')
+            ylabel(app.UIAxes1_2, 'A')
+            zlabel(app.UIAxes1_2, 'Z')
+            app.UIAxes1_2.Position = [25 181 536 167];
+
+            % Create UIAxes1_3
+            app.UIAxes1_3 = uiaxes(app.SignalTab);
+            title(app.UIAxes1_3, 'Train Signal according to the classification')
+            xlabel(app.UIAxes1_3, 't')
+            ylabel(app.UIAxes1_3, 'A')
+            zlabel(app.UIAxes1_3, 'Z')
+            app.UIAxes1_3.PlotBoxAspectRatio = [4.35714285714286 1 1];
+            app.UIAxes1_3.Position = [27 15 536 167];
+
+            % Create PatternTab
+            app.PatternTab = uitab(app.TabGroup);
+            app.PatternTab.Title = 'Pattern';
+
+            % Create UIAxes2
+            app.UIAxes2 = uiaxes(app.PatternTab);
+            title(app.UIAxes2, 'Energy Pattern')
+            xlabel(app.UIAxes2, 'X')
+            ylabel(app.UIAxes2, 'Y')
+            zlabel(app.UIAxes2, 'Z')
+            app.UIAxes2.PlotBoxAspectRatio = [4.38848920863309 1 1];
+            app.UIAxes2.Position = [25 15 536 167];
+
+            % Create UIAxes1
+            app.UIAxes1 = uiaxes(app.PatternTab);
+            title(app.UIAxes1, 'Signal')
+            xlabel(app.UIAxes1, 't')
+            ylabel(app.UIAxes1, 'A')
+            zlabel(app.UIAxes1, 'Z')
+            app.UIAxes1.Position = [25 181 536 167];
+
+            % Create FinalProjectBiologicalSignalProcessingLabel
+            app.FinalProjectBiologicalSignalProcessingLabel = uilabel(app.UIFigure);
+            app.FinalProjectBiologicalSignalProcessingLabel.HorizontalAlignment = 'center';
+            app.FinalProjectBiologicalSignalProcessingLabel.FontSize = 20;
+            app.FinalProjectBiologicalSignalProcessingLabel.FontWeight = 'bold';
+            app.FinalProjectBiologicalSignalProcessingLabel.Position = [117 436 413 25];
+            app.FinalProjectBiologicalSignalProcessingLabel.Text = 'Final Project Biological Signal Processing';
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = PF
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            % Execute the startup function
+            runStartupFcn(app, @startupFcn)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end
