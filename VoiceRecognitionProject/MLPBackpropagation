@@ -1,0 +1,41 @@
+%% MLP w/Backpropagation
+clear all;clc;close all
+p=xlsread('patronEnergia.csv');
+% vnorm=max(max(p(21:40,:)));
+vnorm=max(max(p));
+vnorm=80;
+p=p/vnorm;
+%% Setting the weights, biases, targets and learning rate
+R = 35; %Each input have 35 values that correspond to energy
+N1=10; %We'll use 10 neurons in the input layer
+N2=10; %10 neurons in the hidden layer
+N3=4; %And 4 on the output
+w1=rand(N1,R);
+b1=rand(N1,1);
+w2=rand(N2,N1);
+b2=rand(N2,1);
+w3=rand(N3,N2);
+b3=rand(N3,1);
+alpha=0.001; %We set a learning rate of 0.001
+t=xlsread('DataTargets.xlsx');
+%% Training MLP  
+for rep=1:1000000  %We set the epochs
+%     for k=1:4 %And we use the 4 phrases features
+    for i=21:40
+        a1=logsig(w1*p(i,:)'+b1);
+        a2=logsig(w2*a1+b2);
+        a3=purelin(w3*a2+b3);
+        e=t(i,:)'-a3; %And then we calculate the error
+        S3=-2*e;
+        S2=((1-a2(1:N2)).*(a2(1:N2))).*eye(N2)*w3'*S3;
+        S1=((1-a1(1:N1)).*(a1(1:N1))).*eye(N1)*w2'*S2;
+        w3=w3-alpha*S3*a2';
+        b3=b3-alpha*S3;
+        w2=w2-alpha*S2*a1'; %Finally, we
+        b2=b2-alpha*S2; %recalculate the new
+        w1=w1-alpha*S1*p(i,:); %weights
+        b1=b1-alpha*S1; %and biases
+    end
+end
+
+save results.mat w1 w2 w3 b1 b2 b3
